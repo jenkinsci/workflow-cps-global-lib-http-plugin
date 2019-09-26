@@ -22,6 +22,7 @@ import jenkins.model.Jenkins;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpStatus;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -51,6 +52,8 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
@@ -241,6 +244,12 @@ public class HttpRetriever extends LibraryRetriever {
         try (CloseableHttpClient client = HttpClients.createDefault()) {
             HttpClientContext context = getHttpClientContext(passwordCredentials);
             HttpGet get = new HttpGet(new URL(sourceURL).toURI());
+            if (passwordCredentials != null) {
+                String encoded = Base64.getEncoder()
+                        .encodeToString((passwordCredentials.getUsername() + ":" + passwordCredentials.getPassword())
+                                .getBytes(StandardCharsets.UTF_8));
+                get.setHeader(HttpHeaders.AUTHORIZATION, "Basic " + encoded);
+            }
             try (CloseableHttpResponse response = client.execute(get, context)) {
                 int statusCode = response.getStatusLine().getStatusCode();
                 if (statusCode != HttpStatus.SC_OK) {
