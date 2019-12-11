@@ -173,7 +173,7 @@
 
   <scm>
     <connection>https://github.com/jenkinsci/workflow-cps-global-lib-http-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:jenkinsci/workflow-cps-global-lib-http-plugin.git</developerConnection>
+    <developerConnection>scm:git:https://${env.GITHUB_ACTOR}:${env.GITHUB_TOKEN}@github.com/jenkinsci/workflow-cps-global-lib-http-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/workflow-cps-global-lib-http-plugin</url>
     <tag>HEAD</tag>
   </scm>
