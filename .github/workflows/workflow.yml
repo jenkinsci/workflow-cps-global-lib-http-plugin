@@ -18,7 +18,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         REPO_OWNER: fabricepipart
-        RELEASE_BRANCHES: master
+        RELEASE_BRANCHES: master,feature.*
     - name: Build Maven
       env:
         VERSION: ${{ steps.versioning.outputs.new_tag }}
