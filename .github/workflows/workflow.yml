@@ -24,7 +24,7 @@ jobs:
         VERSION: ${{ steps.versioning.outputs.new_tag }}
       run: |
         mvn -B -U versions:set -DnewVersion=${VERSION} &> /dev/null
-        mvn -B -U clean verify -DskipTests #removeme
+        #mvn -B -U clean verify -DskipTests #removeme
     - uses: codecov/codecov-action@v1.0.3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
