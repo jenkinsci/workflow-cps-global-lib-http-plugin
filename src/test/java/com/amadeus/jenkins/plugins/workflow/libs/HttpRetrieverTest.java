@@ -172,6 +172,15 @@ public class HttpRetrieverTest {
     }
 
     @Test
+    public void extractsSharedLibraryWhenEncasedInUpperLevelDirectory() throws Exception {
+        createRetriever(getUrl("http-lib-retriever-tests-encased-in-upper-directory.zip"), "/http-lib-retriever-tests-encased-in-upper-directory.zip");
+        retriever.retrieve("http-lib-retriever-tests", "1.2.3", target, run, listener);
+        Assert.assertTrue(target.child("src").exists());
+        Assert.assertTrue(target.child("vars").exists());
+        Assert.assertTrue(target.child("resources").exists());
+    }
+
+    @Test
     public void acceptsNoVersionsDeclared() throws Exception {
         createRetriever(getUrl("http-lib-retriever-tests-no-version.zip"), "/http-lib-retriever-tests-no-version.zip");
         retriever.retrieve("http-lib-retriever-tests", "1.2.3", target, run, listener);
