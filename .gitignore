@@ -4,6 +4,12 @@ work/
 http-shared-lib.iml
 publish.properties
 .factorypath
+# Intellij Files
+*.iml
+# Eclipse
+.classpath
+.project
+.settings/
 
 # This one is used to get the colors in the IDE, basically you do a ln -s Jenkinsfile Jenkinsfile.groovy and you get the colors, but we do not want to commit it :)
 Jenkinsfile.groovy
