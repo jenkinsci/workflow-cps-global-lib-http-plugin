@@ -7,9 +7,7 @@ jobs:
   ci-ubuntu-latest:
     runs-on: ubuntu-latest
     steps:
-      - name: Workaround to prevent checkout failure
-        run: sudo chown -R $USER:$USER /home/github/actions-runner/_work/workflow-cps-global-lib-http-plugin
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: ${{ github.head_ref }}
       - name: Set up JDK 1.8
