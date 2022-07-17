@@ -116,6 +116,15 @@ public class HttpRetrieverIntegrationTests {
     }
 
     @Test
+    public void acceptsSharedLibraryIfOnlyDirectoryPresentIsVarsSrcOrResources() throws Exception {
+        FilePath target = buildJobWithLibrary(
+                "http-lib-retriever-tests-just-vars-dir.zip",
+                "1.2.3"
+        );
+        Assert.assertTrue(target.child("vars").exists());
+    }
+
+    @Test
     public void acceptsNoVersionsDeclared() throws Exception {
         FilePath target = buildJobWithLibrary(
                 "http-lib-retriever-tests-no-version.zip",

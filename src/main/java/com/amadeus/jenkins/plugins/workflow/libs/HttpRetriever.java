@@ -231,7 +231,7 @@ public class HttpRetriever extends LibraryRetriever {
           // perform a final check to make sure the upper level directory isn't just a single dir of a shared library,
           // (e.g.`src`, `vars`, or `resources`) before moving the child contents into the proper FS location
           String sharedLibUpperDir = lease.path.list().get(0).getName();
-          if (sharedLibUpperDir != "src" && sharedLibUpperDir != "vars" && sharedLibUpperDir != "resources") {
+          if (!sharedLibUpperDir.equals("src") && !sharedLibUpperDir.equals("vars") && !sharedLibUpperDir.equals("resources")) {
               // move child contents of the encompassing directory
               lease.path.list().get(0).moveAllChildrenTo(lease.path);
           }
