@@ -219,6 +219,19 @@ public class HttpRetrieverTest {
         retriever.retrieve("http-lib-retriever-tests", "1.2.3", target, run, listener);
     }
 
+    @Test(expected = Exception.class)
+    public void doesNotRetrieveIfThereAreMultipleUpperDirs() throws Exception {
+        //Assert.assertFalse(target.child("version.txt").exists());
+        //createRetriever("jenkins-shared-library-upper-dir-too-many-dirs.zip", RSC_FILE);
+        //retriever.retrieve("jenkins-shared-library-upper-dir-too-many-dirs.zip", "1.2.3", target, run, listener);
+        createRetriever(getUrl("jenkins-shared-library-upper-dir-too-many-dirs.zip"), "/jenkins-shared-library-upper-dir-too-many-dirs.zip");
+        retriever.retrieve("http-lib-retriever-tests", "1.2.3", target, run, listener);
+        Assert.assertFalse(target.child("src").exists());
+        //Assert.assertTrue(target.child("src").exists());
+        //Assert.assertTrue(target.child("vars").exists());
+        //Assert.assertTrue(target.child("resources").exists());
+    }
+
     @Test(expected = IOException.class)
     public void exceptionIfUrNotFound() throws Exception {
         createRetriever(RSC_FILE, RSC_FILE, HttpURLConnection.HTTP_NOT_FOUND);
