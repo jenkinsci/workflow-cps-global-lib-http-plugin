@@ -37,7 +37,7 @@
   </pluginRepositories>
 
   <properties>
-    <jenkins.version>2.289.3</jenkins.version>
+    <jenkins.version>2.303.3</jenkins.version>
     <java.level>8</java.level>
     <artifactory-maven-plugin.version>2.6.1</artifactory-maven-plugin.version>
     <project.build.testSourceDirectory>src/test/java</project.build.testSourceDirectory>
@@ -47,8 +47,8 @@
     <dependencies>
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
-        <artifactId>bom-2.289.x</artifactId>
-        <version>1181.v04b_21d4b_0d6c</version>
+        <artifactId>bom-2.303.x</artifactId>
+        <version>1438.v6a_2c29d73f82</version>
         <scope>import</scope>
         <type>pom</type>
       </dependency>
