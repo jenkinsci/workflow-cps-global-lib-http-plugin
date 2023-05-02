@@ -37,6 +37,7 @@
   </pluginRepositories>
 
   <properties>
+    <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     <jenkins.version>2.289.3</jenkins.version>
     <java.level>8</java.level>
     <artifactory-maven-plugin.version>2.6.1</artifactory-maven-plugin.version>
@@ -176,10 +177,10 @@
   </build>
 
   <scm>
-    <connection>scm:git:https://github.com/jenkinsci/workflow-cps-global-lib-http-plugin.git</connection>
-    <developerConnection>scm:git:https://github.com/jenkinsci/workflow-cps-global-lib-http-plugin.git</developerConnection>
-    <url>https://github.com/jenkinsci/workflow-cps-global-lib-http-plugin.git</url>
-    <tag>HEAD</tag>
+      <connection>scm:git:git://github.com/${gitHubRepo}.git</connection>
+      <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+      <url>https://github.com/${gitHubRepo}</url>
+      <tag>${scmTag}</tag>
   </scm>
 
 </project>
