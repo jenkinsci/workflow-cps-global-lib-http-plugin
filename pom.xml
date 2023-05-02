@@ -176,8 +176,8 @@
   </build>
 
   <scm>
-    <connection>scm:git:${project.scm.url}</connection>
-    <developerConnection>scm:git:${project.scm.url}</developerConnection>
+    <connection>scm:git:https://github.com/jenkinsci/workflow-cps-global-lib-http-plugin.git</connection>
+    <developerConnection>scm:git:https://github.com/jenkinsci/workflow-cps-global-lib-http-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/workflow-cps-global-lib-http-plugin.git</url>
     <tag>HEAD</tag>
   </scm>
