@@ -177,10 +177,10 @@
   </build>
 
   <scm>
-      <connection>scm:git:git://github.com/${gitHubRepo}.git</connection>
-      <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
-      <url>https://github.com/${gitHubRepo}</url>
-      <tag>${scmTag}</tag>
+    <connection>scm:git:${project.scm.url}</connection>
+    <developerConnection>scm:git:${project.scm.url}</developerConnection>
+    <url>https://github.com/jenkinsci/workflow-cps-global-lib-http-plugin.git</url>
+    <tag>2.18.0</tag>
   </scm>
 
 </project>
