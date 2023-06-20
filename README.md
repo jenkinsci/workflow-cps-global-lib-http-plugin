@@ -8,7 +8,7 @@
 
 The current official plugin [workflow-cps-global-lib](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/) does provide a way to retrieve shared libraries through a SCM, such as Git. The goal of this plugin is to provide another way to retrieve shared libraries via the *@Library* declaration in a Jenkinsfile.
 
-This is a way to separate to concerns : source code (SCM) and built artefacts (binaries). Built artefacts are immutable, tagged and often stored on a different kind of infrastructure. Since pipelines can be used to make production loads, it makes sense to host the libraries on a server with a production-level SLA for example. You can also make sure that your artefact repository is close to your pipelines and share the same SLA. Having your Jenkins and your artefact repository close limits latency and limits network issues.
+This is a way to separate two concerns : source code (SCM) and built artefacts (binaries). Built artefacts are immutable, tagged and often stored on a different kind of infrastructure. Since pipelines can be used to make production loads, it makes sense to host the libraries on a server with a production-level SLA for example. You can also make sure that your artefact repository is close to your pipelines and share the same SLA. Having your Jenkins and your artefact repository close limits latency and limits network issues.
 
 ## Context
 
