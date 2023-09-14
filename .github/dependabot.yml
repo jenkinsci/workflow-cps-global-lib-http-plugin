@@ -11,28 +11,3 @@ updates:
   schedule:
     interval: daily
   open-pull-requests-limit: 10
-  ignore:
-  - dependency-name: io.jenkins:configuration-as-code
-    versions:
-    - "> 1.13"
-  - dependency-name: org.jenkins-ci.plugins:apache-httpcomponents-client-4-api
-    versions:
-    - "> 4.5.5-3.0"
-  - dependency-name: org.jenkins-ci.plugins:plugin
-    versions:
-    - "> 3.43"
-  - dependency-name: org.jenkins-ci.plugins:scm-api
-    versions:
-    - "> 2.2.6"
-  - dependency-name: org.jenkins-ci.plugins:script-security
-    versions:
-    - "> 1.39"
-  - dependency-name: org.jenkins-ci.plugins:structs
-    versions:
-    - "> 1.17"
-  - dependency-name: org.jenkins-ci.plugins.workflow:workflow-cps-global-lib
-    versions:
-    - "> 2.10"
-  - dependency-name: org.jenkins-ci.plugins.workflow:workflow-job
-    versions:
-    - "> 2.32"
