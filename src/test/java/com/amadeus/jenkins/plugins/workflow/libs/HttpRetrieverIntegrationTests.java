@@ -14,7 +14,6 @@ import com.github.tomakehurst.wiremock.matching.MatchResult;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.ExtensionList;
-import hudson.Functions;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHeaders;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -23,7 +22,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.libs.GlobalLibraries;
 import org.jenkinsci.plugins.workflow.libs.LibraryConfiguration;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -36,6 +34,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class HttpRetrieverIntegrationTests {
     @Rule
@@ -196,7 +195,6 @@ public class HttpRetrieverIntegrationTests {
     Path buildJobWithLibrary(@Nullable String fixtureName, @Nullable String libraryVersion, @NonNull
             Function<String, String> urlBuilder, boolean withPreemptiveAuth)
             throws Exception {
-        Assume.assumeFalse("TODO flakes on Windows due to open file handles", Functions.isWindows());
         String importScript;
         if (libraryVersion != null) {
             importScript = "@Library('foo@" + libraryVersion + "') _";
@@ -237,16 +235,16 @@ public class HttpRetrieverIntegrationTests {
         p.setDefinition(new CpsFlowDefinition(importScript, true));
 
         WorkflowRun run = j.buildAndAssertSuccess(p);
-        List<Path> children = Files.list(run.getRootDir().toPath().resolve("libs"))
-                .filter(Files::isDirectory)
-                .collect(Collectors.toList());
+        List<Path> children;
+        try (Stream<Path> list = Files.list(run.getRootDir().toPath().resolve("libs"))) {
+            children = list.filter(Files::isDirectory).collect(Collectors.toList());
+        }
         assertThat(children, hasSize(1));
         return children.get(0);
     }
 
     @Test
     public void retrievesWithPreemptiveAuthIfNeeded() throws Exception {
-        Assume.assumeFalse("TODO flakes on Windows due to open file handles", Functions.isWindows());
         String libraryName = "foo";
         String importScript = "@Library('foo@1.0') _";
         String fixtureName = "http-lib-retriever-tests.zip";
@@ -271,9 +269,10 @@ public class HttpRetrieverIntegrationTests {
         p.setDefinition(new CpsFlowDefinition(importScript, true));
 
         WorkflowRun run = j.buildAndAssertSuccess(p);
-        List<Path> children = Files.list(run.getRootDir().toPath().resolve("libs"))
-                .filter(Files::isDirectory)
-                .collect(Collectors.toList());
+        List<Path> children;
+        try (Stream<Path> list = Files.list(run.getRootDir().toPath().resolve("libs"))) {
+            children = list.filter(Files::isDirectory).collect(Collectors.toList());
+        }
         assertThat(children, hasSize(1));
         Path target = children.get(0);
 
