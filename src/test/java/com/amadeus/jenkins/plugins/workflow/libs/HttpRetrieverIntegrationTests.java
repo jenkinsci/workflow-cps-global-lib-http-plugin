@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class HttpRetrieverIntegrationTests {
     @Rule
@@ -234,9 +235,10 @@ public class HttpRetrieverIntegrationTests {
         p.setDefinition(new CpsFlowDefinition(importScript, true));
 
         WorkflowRun run = j.buildAndAssertSuccess(p);
-        List<Path> children = Files.list(run.getRootDir().toPath().resolve("libs"))
-                .filter(Files::isDirectory)
-                .collect(Collectors.toList());
+        List<Path> children;
+        try (Stream<Path> list = Files.list(run.getRootDir().toPath().resolve("libs"))) {
+            children = list.filter(Files::isDirectory).collect(Collectors.toList());
+        }
         assertThat(children, hasSize(1));
         return children.get(0);
     }
@@ -267,9 +269,10 @@ public class HttpRetrieverIntegrationTests {
         p.setDefinition(new CpsFlowDefinition(importScript, true));
 
         WorkflowRun run = j.buildAndAssertSuccess(p);
-        List<Path> children = Files.list(run.getRootDir().toPath().resolve("libs"))
-                .filter(Files::isDirectory)
-                .collect(Collectors.toList());
+        List<Path> children;
+        try (Stream<Path> list = Files.list(run.getRootDir().toPath().resolve("libs"))) {
+            children = list.filter(Files::isDirectory).collect(Collectors.toList());
+        }
         assertThat(children, hasSize(1));
         Path target = children.get(0);
 
