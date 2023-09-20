@@ -14,7 +14,6 @@ import com.github.tomakehurst.wiremock.matching.MatchResult;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.ExtensionList;
-import hudson.Functions;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHeaders;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -23,7 +22,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.libs.GlobalLibraries;
 import org.jenkinsci.plugins.workflow.libs.LibraryConfiguration;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -196,7 +194,6 @@ public class HttpRetrieverIntegrationTests {
     Path buildJobWithLibrary(@Nullable String fixtureName, @Nullable String libraryVersion, @NonNull
             Function<String, String> urlBuilder, boolean withPreemptiveAuth)
             throws Exception {
-        Assume.assumeFalse("TODO flakes on Windows due to open file handles", Functions.isWindows());
         String importScript;
         if (libraryVersion != null) {
             importScript = "@Library('foo@" + libraryVersion + "') _";
@@ -246,7 +243,6 @@ public class HttpRetrieverIntegrationTests {
 
     @Test
     public void retrievesWithPreemptiveAuthIfNeeded() throws Exception {
-        Assume.assumeFalse("TODO flakes on Windows due to open file handles", Functions.isWindows());
         String libraryName = "foo";
         String importScript = "@Library('foo@1.0') _";
         String fixtureName = "http-lib-retriever-tests.zip";
