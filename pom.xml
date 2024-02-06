@@ -11,7 +11,7 @@
 
   <groupId>com.amadeus.jenkins.plugins</groupId>
   <artifactId>workflow-cps-global-lib-http</artifactId>
-  <version>${revision}${changelist}</version>
+  <version>2.43.0</version>
   <packaging>hpi</packaging>
   <name>Pipeline: Shared Groovy Libraries through HTTP retrieval</name>
   <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
@@ -125,7 +125,7 @@
     <connection>scm:git:${project.scm.url}</connection>
     <developerConnection>scm:git:${project.scm.url}</developerConnection>
     <url>https://github.com/${gitHubRepo}.git</url>
-    <tag>${scmTag}</tag>
+    <tag>2.43.0</tag>
   </scm>
 
 </project>
