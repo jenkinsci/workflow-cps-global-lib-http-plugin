@@ -6,11 +6,15 @@ import static org.hamcrest.Matchers.hasSize;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
+import com.github.tomakehurst.wiremock.client.MappingBuilder;
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.MatchResult;
+import com.github.tomakehurst.wiremock.matching.UrlPattern;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.ExtensionList;
@@ -27,7 +31,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -179,6 +185,139 @@ public class HttpRetrieverIntegrationTests {
         Assert.assertTrue(buildFailed);
     }
 
+    @Test
+    public void retrievesWithPreemptiveAuthIfNeeded() throws Exception {
+        String libraryName = "foo";
+        String importScript = "@Library('foo@1.0') _";
+        String fixtureName = "http-lib-retriever-tests.zip";
+        InputStream archive = Objects.requireNonNull(ClassLoader.getSystemResourceAsStream(fixtureName));
+        wireMock.stubFor(
+                WireMock.get(WireMock.anyUrl())
+                        .atPriority(2)
+                        .withBasicAuth(credentials.getUsername(), credentials.getPassword().getPlainText())
+                        .willReturn(WireMock.aResponse().withBody(IOUtils.toByteArray(archive)))
+
+        );
+        wireMock.stubFor(
+                WireMock.any(WireMock.anyUrl())
+                        .atPriority(1)
+                        .andMatching(r -> MatchResult.of(!r.getMethod().equals(RequestMethod.HEAD) && !r.containsHeader(HttpHeaders.AUTHORIZATION)))
+                        .willReturn(WireMock.notFound()));
+        globalLibraries.getLibraries().add(new LibraryConfiguration(
+                libraryName,
+                new HttpRetriever(wireMock.url(libraryName + ".zip"), credentials.getId(), true)
+        ));
+        WorkflowJob p = j.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(importScript, true));
+
+        WorkflowRun run = j.buildAndAssertSuccess(p);
+        List<Path> children;
+        try (Stream<Path> list = Files.list(run.getRootDir().toPath().resolve("libs"))) {
+            children = list.filter(Files::isDirectory).collect(Collectors.toList());
+        }
+        assertThat(children, hasSize(1));
+        Path target = children.get(0);
+
+        Assert.assertTrue(Files.exists(target.resolve("version.txt")));
+        Assert.assertTrue(Files.exists(target.resolve("src")));
+        Assert.assertTrue(Files.exists(target.resolve("vars")));
+        Assert.assertTrue(Files.exists(target.resolve("resources")));
+    }
+
+    @Test
+    public void firstResponseCodeToRetryThenOK() throws Exception {
+        String libraryName = "foo";
+        String importScript = "@Library('foo@1.0') _";
+        String fixtureName = "http-lib-retriever-tests.zip";
+        wireMock.stubFor(
+                WireMock.head(WireMock.anyUrl())
+                        .atPriority(2)
+                        .willReturn(WireMock.ok())
+        );
+        stubForGet(fixtureName, List.of(HttpURLConnection.HTTP_INTERNAL_ERROR, HttpURLConnection.HTTP_OK));
+        globalLibraries.getLibraries().add(new LibraryConfiguration(
+                libraryName,
+                new HttpRetriever(wireMock.url(libraryName + ".zip"), credentials.getId(), true)
+        ));
+        WorkflowJob p = j.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(importScript, true));
+
+        WorkflowRun run = j.buildAndAssertSuccess(p);
+        List<Path> children;
+        try (Stream<Path> list = Files.list(run.getRootDir().toPath().resolve("libs"))) {
+            children = list.filter(Files::isDirectory).collect(Collectors.toList());
+        }
+        assertThat(children, hasSize(1));
+        Path target = children.get(0);
+
+        Assert.assertTrue(Files.exists(target.resolve("version.txt")));
+        Assert.assertTrue(Files.exists(target.resolve("src")));
+        Assert.assertTrue(Files.exists(target.resolve("vars")));
+        Assert.assertTrue(Files.exists(target.resolve("resources")));
+    }
+
+    @Test
+    public void firstAndSecondResponseCodeToRetryThenOK() throws Exception {
+        String libraryName = "foo";
+        String importScript = "@Library('foo@1.0') _";
+        String fixtureName = "http-lib-retriever-tests.zip";
+        wireMock.stubFor(
+                WireMock.head(WireMock.anyUrl())
+                        .atPriority(2)
+                        .willReturn(WireMock.ok())
+        );
+        stubForGet(fixtureName, List.of(HttpURLConnection.HTTP_BAD_GATEWAY, HttpURLConnection.HTTP_CLIENT_TIMEOUT,
+                HttpURLConnection.HTTP_OK));
+        globalLibraries.getLibraries().add(new LibraryConfiguration(
+                libraryName,
+                new HttpRetriever(wireMock.url(libraryName + ".zip"), credentials.getId(), true)
+        ));
+        WorkflowJob p = j.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(importScript, true));
+
+        WorkflowRun run = j.buildAndAssertSuccess(p);
+        List<Path> children;
+        try (Stream<Path> list = Files.list(run.getRootDir().toPath().resolve("libs"))) {
+            children = list.filter(Files::isDirectory).collect(Collectors.toList());
+        }
+        assertThat(children, hasSize(1));
+        Path target = children.get(0);
+
+        Assert.assertTrue(Files.exists(target.resolve("version.txt")));
+        Assert.assertTrue(Files.exists(target.resolve("src")));
+        Assert.assertTrue(Files.exists(target.resolve("vars")));
+        Assert.assertTrue(Files.exists(target.resolve("resources")));
+    }
+
+    @Test
+    public void firstSecondAndThirdResponseCodeToRetryThenException() throws Exception {
+        String libraryName = "foo";
+        String importScript = "@Library('foo@1.0') _";
+        String fixtureName = "http-lib-retriever-tests.zip";
+        wireMock.stubFor(
+                WireMock.head(WireMock.anyUrl())
+                        .atPriority(2)
+                        .willReturn(WireMock.ok())
+        );
+        stubForGet(fixtureName, List.of(HttpURLConnection.HTTP_BAD_GATEWAY, HttpURLConnection.HTTP_CLIENT_TIMEOUT,
+                HttpURLConnection.HTTP_GATEWAY_TIMEOUT, HttpURLConnection.HTTP_OK));
+        globalLibraries.getLibraries().add(new LibraryConfiguration(
+                libraryName,
+                new HttpRetriever(wireMock.url(libraryName + ".zip"), credentials.getId(), true)
+        ));
+        WorkflowJob p = j.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(importScript, true));
+
+        boolean buildFailed = false;
+        try {
+            j.buildAndAssertSuccess(p);
+        } catch (java.lang.AssertionError e) {
+            e.printStackTrace();
+            buildFailed = true;
+        }
+        Assert.assertTrue("Expected build to fail since too many retries", buildFailed);
+    }
+
     private @NonNull
     Path buildJobWithLibrary(@Nullable String fixtureName, @Nullable String libraryVersion)
             throws Exception {
@@ -243,43 +382,25 @@ public class HttpRetrieverIntegrationTests {
         return children.get(0);
     }
 
-    @Test
-    public void retrievesWithPreemptiveAuthIfNeeded() throws Exception {
-        String libraryName = "foo";
-        String importScript = "@Library('foo@1.0') _";
-        String fixtureName = "http-lib-retriever-tests.zip";
+    private void stubForGet(@Nullable String fixtureName, List<Integer> returnsForDownload) throws IOException {
         InputStream archive = Objects.requireNonNull(ClassLoader.getSystemResourceAsStream(fixtureName));
-        wireMock.stubFor(
-                WireMock.get(WireMock.anyUrl())
-                        .atPriority(2)
-                        .withBasicAuth(credentials.getUsername(), credentials.getPassword().getPlainText())
-                        .willReturn(WireMock.aResponse().withBody(IOUtils.toByteArray(archive)))
-
-        );
-        wireMock.stubFor(
-                WireMock.any(WireMock.anyUrl())
-                        .atPriority(1)
-                        .andMatching(r -> MatchResult.of(!r.getMethod().equals(RequestMethod.HEAD) && !r.containsHeader(HttpHeaders.AUTHORIZATION)))
-                        .willReturn(WireMock.notFound()));
-        globalLibraries.getLibraries().add(new LibraryConfiguration(
-                libraryName,
-                new HttpRetriever(wireMock.url(libraryName + ".zip"), credentials.getId(), true)
-        ));
-        WorkflowJob p = j.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition(importScript, true));
-
-        WorkflowRun run = j.buildAndAssertSuccess(p);
-        List<Path> children;
-        try (Stream<Path> list = Files.list(run.getRootDir().toPath().resolve("libs"))) {
-            children = list.filter(Files::isDirectory).collect(Collectors.toList());
+        String scenario = "Scenario for fixtureName " + fixtureName + " and returnsForDownload " + returnsForDownload;
+        String previousState = Scenario.STARTED;
+        UrlPattern urlPattern = WireMock.anyUrl();
+        for (int i = 0; i < returnsForDownload.size(); i++) {
+            String currentState = "Request " + (i + 1);
+            ResponseDefinitionBuilder responseDefinitionBuilder = returnsForDownload.get(i) == HttpURLConnection.HTTP_OK ?
+                    WireMock.aResponse().withBody(IOUtils.toByteArray(archive)) :
+                    WireMock.status(returnsForDownload.get(i));
+            MappingBuilder mappingBuilder = WireMock.get(urlPattern)
+                    .inScenario(scenario)
+                    .whenScenarioStateIs(previousState)
+                    .withBasicAuth(credentials.getUsername(), credentials.getPassword().getPlainText())
+                    .atPriority(2)
+                    .willReturn(responseDefinitionBuilder)
+                    .willSetStateTo(currentState);
+            wireMock.stubFor(mappingBuilder);
+            previousState = currentState;
         }
-        assertThat(children, hasSize(1));
-        Path target = children.get(0);
-
-        Assert.assertTrue(Files.exists(target.resolve("version.txt")));
-        Assert.assertTrue(Files.exists(target.resolve("src")));
-        Assert.assertTrue(Files.exists(target.resolve("vars")));
-        Assert.assertTrue(Files.exists(target.resolve("resources")));
     }
-
 }

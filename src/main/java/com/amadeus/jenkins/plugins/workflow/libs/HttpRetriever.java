@@ -104,6 +104,8 @@ public class HttpRetriever extends LibraryRetriever {
    */
   private final boolean preemptiveAuth;
 
+  private static final Logger LOGGER = Logger.getLogger(HttpRetriever.class.getName());
+
   /**
    * Constructor
    *
@@ -302,7 +304,7 @@ public class HttpRetriever extends LibraryRetriever {
           throws IOException, URISyntaxException {
     URL url = new URL(sourceURL);
     HttpGet get = new HttpGet(url.toURI());
-    try (CloseableHttpClient client = HttpClients.createDefault()) {
+    try (CloseableHttpClient client = createCloseableHttpClient()) {
       HttpClientContext context = getHttpClientContext(passwordCredentials, url);
       try (CloseableHttpResponse response = client.execute(get, context)) {
         int statusCode = response.getStatusLine().getStatusCode();
@@ -423,8 +425,7 @@ public class HttpRetriever extends LibraryRetriever {
     try (InputStream inputStream = filePath.child("version.txt").read()) {
       return IOUtils.toString(inputStream);
     } catch (FileNotFoundException | NoSuchFileException e) {
-      Logger.getLogger(HttpRetriever.class.getName())
-              .log(Level.FINER, "version.txt not found in the archive.", e);
+      LOGGER.log(Level.FINER, "version.txt not found in the archive.", e);
       return null;
     }
 
@@ -442,12 +443,17 @@ public class HttpRetriever extends LibraryRetriever {
   private int checkURL(URL url) throws IOException, URISyntaxException {
     UsernamePasswordCredentials passwordCredentials = initPasswordCredentials();
     HttpHead head = new HttpHead(url.toURI());
-    try (CloseableHttpClient client = HttpClients.createDefault()) {
+    try (CloseableHttpClient client = createCloseableHttpClient()) {
       HttpClientContext context = getHttpClientContext(passwordCredentials, url);
       try (CloseableHttpResponse response = client.execute(head, context)) {
         return response.getStatusLine().getStatusCode();
       }
     }
+  }
+
+  private static CloseableHttpClient createCloseableHttpClient() {
+    return HttpClients.custom().setServiceUnavailableRetryStrategy(new CustomServiceUnavailableRetryStrategy())
+            .setRetryHandler(new CustomHttpRequestRetryHandler()).build();
   }
 
   private HttpClientContext getHttpClientContext(UsernamePasswordCredentials passwordCredentials, URL url) {

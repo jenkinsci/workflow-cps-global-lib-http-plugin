@@ -3,11 +3,15 @@ package com.amadeus.jenkins.plugins.workflow.libs;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
+import com.github.tomakehurst.wiremock.client.MappingBuilder;
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.MatchResult;
+import com.github.tomakehurst.wiremock.matching.UrlPattern;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import hudson.FilePath;
 import hudson.model.Computer;
 import hudson.model.FreeStyleProject;
@@ -31,13 +35,14 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 @RunWith(MockitoJUnitRunner.class)
 public class HttpRetrieverTest {
 
     FilePath target;
-    private FilePath archive;
     private static final String RSC_FILE = "http-lib-retriever-tests.zip";
 
     @Mock
@@ -81,9 +86,8 @@ public class HttpRetrieverTest {
     }
 
     @org.junit.After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         target = null;
-        archive = null;
     }
 
     private void createRetriever(String urlToCall, String relativeUrlToServe) throws IOException {
@@ -91,21 +95,53 @@ public class HttpRetrieverTest {
     }
 
     private void createRetriever(String urlToCall, String relativeUrlToServe, int returnForCheck) throws IOException {
-        InputStream archive = Objects.requireNonNull(ClassLoader.getSystemResourceAsStream(relativeUrlToServe));
+        createRetriever(urlToCall, relativeUrlToServe, returnForCheck, List.of(HttpURLConnection.HTTP_OK));
+    }
+
+    private void createRetriever(String urlToCall, String relativeUrlToServe, List<Integer> returnsForDownload) throws IOException {
+        createRetriever(urlToCall, relativeUrlToServe, HttpURLConnection.HTTP_OK, returnsForDownload);
+    }
+
+    private void createRetriever(String urlToCall, String relativeUrlToServe, int returnForCheck, List<Integer> returnsForDownload)
+            throws IOException {
+        stubForHead(relativeUrlToServe, returnForCheck);
+        stubForGet(relativeUrlToServe, returnsForDownload);
+        retriever = new HttpRetrieverStub(urlToCall);
+    }
+
+    private void stubForHead(String relativeUrlToServe, int returnForCheck) {
         wireMock.stubFor(
                 WireMock.head(WireMock.urlMatching(".*" + relativeUrlToServe))
                         .atPriority(2)
                         .willReturn(WireMock.status(returnForCheck))
         );
-        wireMock.stubFor(
-                WireMock.get(WireMock.urlMatching(".*" + relativeUrlToServe))
-                        .withBasicAuth("USER", "")
-                        .withBasicAuth(passwordCredentials.getUsername(), passwordCredentials.getPassword().getPlainText())
-                        .atPriority(2)
-                        .willReturn(WireMock.aResponse().withBody(IOUtils.toByteArray(archive)))
+    }
 
-        );
-        retriever = new HttpRetrieverStub(urlToCall);
+    private void stubForGet(String relativeUrlToServe, List<Integer> returnsForDownload) throws IOException {
+        String scenario = "Scenario for " + relativeUrlToServe + " and " + returnsForDownload;
+        String previousState = Scenario.STARTED;
+        UrlPattern urlPattern = WireMock.urlMatching(".*" + relativeUrlToServe);
+        for (int i = 0; i < returnsForDownload.size(); i++) {
+            String currentState = "Request " + (i + 1);
+            ResponseDefinitionBuilder responseDefinitionBuilder = returnsForDownload.get(i) == HttpURLConnection.HTTP_OK ?
+                    WireMock.aResponse().withBody(getArchiveBytes(relativeUrlToServe)) :
+                    WireMock.status(returnsForDownload.get(i));
+            MappingBuilder mappingBuilder = WireMock.get(urlPattern)
+                    .inScenario(scenario)
+                    .whenScenarioStateIs(previousState)
+                    .withBasicAuth("USER", "")
+                    .withBasicAuth(passwordCredentials.getUsername(), passwordCredentials.getPassword().getPlainText())
+                    .atPriority(2)
+                    .willReturn(responseDefinitionBuilder)
+                    .willSetStateTo(currentState);
+            wireMock.stubFor(mappingBuilder);
+            previousState = currentState;
+        }
+    }
+
+    private byte[] getArchiveBytes(String relativeUrlToServe) throws IOException {
+        InputStream archive = Objects.requireNonNull(ClassLoader.getSystemResourceAsStream(relativeUrlToServe));
+        return IOUtils.toByteArray(archive);
     }
 
     private String getUrl(String relativeUrlToServe) {
@@ -122,6 +158,37 @@ public class HttpRetrieverTest {
         Assert.assertTrue(target.child("resources").exists());
     }
 
+    @Test
+    public void firstResponseCodeToRetryThenOK() throws Exception {
+        Assert.assertFalse(target.child("version.txt").exists());
+        createRetriever(getUrl(RSC_FILE), RSC_FILE, Arrays.asList(HttpURLConnection.HTTP_INTERNAL_ERROR, HttpURLConnection.HTTP_OK));
+        retriever.retrieve("http-lib-retriever-tests", "1.2.3", target, run, listener);
+        Assert.assertTrue(target.child("version.txt").exists());
+        Assert.assertTrue(target.child("src").exists());
+        Assert.assertTrue(target.child("vars").exists());
+        Assert.assertTrue(target.child("resources").exists());
+    }
+
+    @Test
+    public void firstAndSecondResponseCodeToRetryThenOK() throws Exception {
+        Assert.assertFalse(target.child("version.txt").exists());
+        createRetriever(getUrl(RSC_FILE), RSC_FILE, Arrays.asList(HttpURLConnection.HTTP_UNAVAILABLE,
+                HttpURLConnection.HTTP_BAD_GATEWAY, HttpURLConnection.HTTP_OK));
+        retriever.retrieve("http-lib-retriever-tests", "1.2.3", target, run, listener);
+        Assert.assertTrue(target.child("version.txt").exists());
+        Assert.assertTrue(target.child("src").exists());
+        Assert.assertTrue(target.child("vars").exists());
+        Assert.assertTrue(target.child("resources").exists());
+    }
+
+    @Test(expected = IOException.class)
+    public void firstSecondAndThirdResponseCodeToRetry() throws Exception {
+        createRetriever(getUrl(RSC_FILE), RSC_FILE, Arrays.asList(HttpURLConnection.HTTP_INTERNAL_ERROR,
+                HttpURLConnection.HTTP_CLIENT_TIMEOUT, HttpURLConnection.HTTP_INTERNAL_ERROR));
+        Assert.assertFalse(target.child("version.txt").exists());
+        retriever.retrieve("http-lib-retriever-tests", "1.2.3", target, run, listener);
+    }
+
     /**
      * In the Admin section 'General Security Configuration', Artifactory has an option
      * 'Hide Existence of Unauthorized Resources' which throws a 404 instead of a 401 when a resource is not authorized
@@ -135,10 +202,6 @@ public class HttpRetrieverTest {
                         .willReturn(WireMock.notFound()));
         Assert.assertFalse(target.child("version.txt").exists());
         retriever.retrieve("http-lib-retriever-tests", "1.2.3", target, run, listener);
-        Assert.assertTrue(target.child("version.txt").exists());
-        Assert.assertTrue(target.child("src").exists());
-        Assert.assertTrue(target.child("vars").exists());
-        Assert.assertTrue(target.child("resources").exists());
     }
 
     /**
