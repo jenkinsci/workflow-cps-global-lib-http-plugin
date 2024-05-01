@@ -42,7 +42,7 @@ jobs:
       - name: Build Maven
         run: |
           mvn -B -U clean verify
-      - uses: codecov/codecov-action@v4.1.0
+      - uses: codecov/codecov-action@v4.3.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: javaplugin
