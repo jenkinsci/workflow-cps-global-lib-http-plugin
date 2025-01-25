@@ -82,13 +82,6 @@
       <artifactId>assertj-core</artifactId>
       <version>3.27.3</version>
       <scope>test</scope>
-      <exclusions>
-        <!-- TODO https://github.com/assertj/assertj/pull/3161 -->
-        <exclusion>
-          <groupId>net.bytebuddy</groupId>
-          <artifactId>byte-buddy</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
